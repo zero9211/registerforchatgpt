@@ -838,7 +838,10 @@ class TempMailLolMailbox(BaseMailbox):
 
     def __init__(self, proxy: str = None):
         self.api = "https://api.tempmail.lol/v2"
-        self.proxy = build_requests_proxy_config(proxy)
+        # tempmail.lol is a public API; residential proxies (e.g. IPRoyal)
+        # may reject CONNECT to it. Always hit the API directly so the
+        # registration proxy is reserved for the target site only.
+        self.proxy = None
         self._token = None
         self._email = None
 
