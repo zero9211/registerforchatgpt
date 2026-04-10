@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       HOST: 0.0.0.0
-      PORT: "8000"
+      PORT: "8081"
       APP_RELOAD: "0"
       APP_CONDA_ENV: docker
       APP_RUNTIME_DIR: /runtime
@@ -23,7 +23,7 @@ services:
       SOLVER_BROWSER_TYPE: ${SOLVER_BROWSER_TYPE:-chromium}
       PLAYWRIGHT_HEADLESS: ${PLAYWRIGHT_HEADLESS:-}
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8081:8081"
       - "127.0.0.1:8889:8889"
     extra_hosts:
       - "host.docker.internal:host-gateway"
