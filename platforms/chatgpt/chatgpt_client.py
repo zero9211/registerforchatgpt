@@ -3,6 +3,7 @@ ChatGPT 注册客户端模块
 使用 curl_cffi 模拟浏览器行为
 """
 
+import json
 import random
 import uuid
 import time
@@ -753,12 +754,70 @@ class ChatGPTClient:
                 self._log(f"authorize_continue/register_user 响应 URL: {str(r.url)[:120]}")
                 return True, "注册成功"
             else:
+                # --- 详细诊断日志：OpenAI 返回 !=200 时，dump 完整上下文以便定位 ---
                 try:
                     error_data = r.json()
                     error_msg = error_data.get("error", {}).get("message", r.text[:200])
-                except:
+                except Exception:
+                    error_data = None
                     error_msg = r.text[:200]
                 self._log(f"注册失败: {r.status_code} - {error_msg}")
+                # 完整 body（截 2000 字符防止爆屏）
+                try:
+                    raw_body = (r.text or "")[:2000]
+                    self._log(f"[DIAG] register_user body: {raw_body}")
+                except Exception as _exc:
+                    self._log(f"[DIAG] register_user body 读取失败: {_exc}")
+                # 解析后的 JSON（如果能 parse 成功）
+                if error_data is not None:
+                    try:
+                        self._log(f"[DIAG] register_user json: {json.dumps(error_data, ensure_ascii=False)[:2000]}")
+                    except Exception:
+                        pass
+                # 关键响应头（OpenAI/CF 风控相关）
+                try:
+                    diag_headers = {
+                        k: v
+                        for k, v in r.headers.items()
+                        if k.lower()
+                        in {
+                            "content-type",
+                            "cf-ray",
+                            "cf-cache-status",
+                            "server",
+                            "x-request-id",
+                            "x-oai-error",
+                            "x-openai-error",
+                            "retry-after",
+                            "www-authenticate",
+                            "set-cookie",
+                        }
+                    }
+                    self._log(f"[DIAG] register_user resp headers: {diag_headers}")
+                except Exception as _exc:
+                    self._log(f"[DIAG] register_user headers 读取失败: {_exc}")
+                # 发送的 sentinel token 结构（脱敏，只看字段存在性 + 长度）
+                try:
+                    sent_sentinel = headers.get("openai-sentinel-token", "")
+                    if sent_sentinel:
+                        try:
+                            parsed = json.loads(sent_sentinel)
+                            stripe = {
+                                k: (f"<len={len(str(parsed.get(k)))}>" if parsed.get(k) else "<empty>")
+                                for k in ("p", "t", "c", "id", "flow")
+                            }
+                            self._log(f"[DIAG] sent sentinel token fields: {stripe}")
+                        except Exception:
+                            self._log(f"[DIAG] sent sentinel token (非 JSON): len={len(sent_sentinel)}")
+                    else:
+                        self._log("[DIAG] sent sentinel token: <missing>")
+                except Exception as _exc:
+                    self._log(f"[DIAG] sentinel token dump 失败: {_exc}")
+                # 请求 URL 最终落点
+                try:
+                    self._log(f"[DIAG] register_user final url: {str(r.url)[:200]}")
+                except Exception:
+                    pass
                 return False, f"HTTP {r.status_code}: {error_msg}"
 
         except Exception as e:
