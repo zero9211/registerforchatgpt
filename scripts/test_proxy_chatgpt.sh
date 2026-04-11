@@ -29,8 +29,11 @@ TARGETS=(
 )
 
 # ---- colors ----
+# Use $'...' so the escapes expand at assignment time, which works with
+# plain `echo` under macOS bash 3.2 (no -e needed).
 if [ -t 1 ]; then
-  GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
+  GREEN=$'\033[0;32m'; RED=$'\033[0;31m'; YELLOW=$'\033[1;33m'
+  BOLD=$'\033[1m';     DIM=$'\033[2m';   RESET=$'\033[0m'
 else
   GREEN=''; RED=''; YELLOW=''; BOLD=''; DIM=''; RESET=''
 fi
